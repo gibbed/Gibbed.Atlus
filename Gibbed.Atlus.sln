@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gibbed.Atlus.DisassembleBF"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gibbed.Atlus.Unpack", "Gibbed.Atlus.Unpack\Gibbed.Atlus.Unpack.csproj", "{7F4248EB-855C-4B2D-8A83-3D3F0CB94E65}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gibbed.Atlus.UnpackMany", "Gibbed.Atlus.UnpackMany\Gibbed.Atlus.UnpackMany.csproj", "{5A60A49C-5168-4309-9C3D-71653F6070AF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,6 +45,10 @@ Global
 		{7F4248EB-855C-4B2D-8A83-3D3F0CB94E65}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7F4248EB-855C-4B2D-8A83-3D3F0CB94E65}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7F4248EB-855C-4B2D-8A83-3D3F0CB94E65}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A60A49C-5168-4309-9C3D-71653F6070AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A60A49C-5168-4309-9C3D-71653F6070AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A60A49C-5168-4309-9C3D-71653F6070AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A60A49C-5168-4309-9C3D-71653F6070AF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

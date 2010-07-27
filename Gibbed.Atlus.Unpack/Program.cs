@@ -6,7 +6,7 @@ using NDesk.Options;
 
 namespace Gibbed.Atlus.Unpack
 {
-    internal class Program
+    public class Program
     {
         private static List<FileFormats.IArchiveFormat> GetArchiveFormats()
         {
@@ -28,9 +28,10 @@ namespace Gibbed.Atlus.Unpack
         {
             bool verbose = false;
             bool overwriteFiles = false;
-            bool decompress = false;
             bool listing = false;
             bool showHelp = false;
+            string filter = null;
+            bool pauseOnError = true;
 
             OptionSet options = new OptionSet()
             {
@@ -38,6 +39,11 @@ namespace Gibbed.Atlus.Unpack
                     "v|verbose",
                     "be verbose (list files)",
                     v => verbose = v != null
+                },
+                {
+                    "np|nopause",
+                    "don't pause on errors",
+                    v => pauseOnError = v == null
                 },
                 {
                     "l|list",
@@ -50,17 +56,22 @@ namespace Gibbed.Atlus.Unpack
                     v => overwriteFiles = v != null
                 },
                 {
+                    "f|filter=",
+                    "extension filtering", 
+                    v => filter = v
+                },
+                {
                     "h|help",
                     "show this message and exit", 
                     v => showHelp = v != null
                 },
             };
 
-            List<string> extra;
+            List<string> extras;
 
             try
             {
-                extra = options.Parse(args);
+                extras = options.Parse(args);
             }
             catch (OptionException e)
             {
@@ -70,18 +81,18 @@ namespace Gibbed.Atlus.Unpack
                 return;
             }
 
-            if (extra.Count < 1 || extra.Count > 2 || showHelp == true)
+            if (extras.Count < 1 || extras.Count > 2 || showHelp == true)
             {
-                Console.WriteLine("Usage: {0} [OPTIONS]+ input_sarc [output_directory]", GetExecutableName());
-                Console.WriteLine("Unpack specified small archive.");
+                Console.WriteLine("Usage: {0} [OPTIONS]+ input_archive [output_directory]", GetExecutableName());
+                Console.WriteLine("Unpack specified archive.");
                 Console.WriteLine();
                 Console.WriteLine("Options:");
                 options.WriteOptionDescriptions(Console.Out);
                 return;
             }
 
-            string inputPath = extra[0];
-            string outputPath = extra.Count > 1 ? extra[1] : Path.ChangeExtension(inputPath, null);
+            string inputPath = extras[0];
+            string outputPath = extras.Count > 1 ? extras[1] : Path.ChangeExtension(inputPath, null);
 
             var formats = GetArchiveFormats();
             FileFormats.IArchiveFormat format = null;
@@ -134,7 +145,11 @@ namespace Gibbed.Atlus.Unpack
                     }
                 }
 
-                Console.ReadKey(true);
+                if (pauseOnError == true)
+                {
+                    Console.ReadKey(true);
+                }
+
                 return;
             }
 
@@ -143,83 +158,113 @@ namespace Gibbed.Atlus.Unpack
             if (entries == null)
             {
                 Console.WriteLine("Error when getting entries (inconsistency between validate and get entries?)");
-                Console.ReadKey(true);
+                
+                if (pauseOnError == true)
+                {
+                    Console.ReadKey(true);
+                }
+
                 return;
             }
 
-            Stream input = File.OpenRead(inputPath);
-            byte[] buffer = new byte[0x4000];
+            if (filter != null)
+            {
+                filter = filter.ToLowerInvariant();
+                entries = entries
+                    .Where(e => MatchesFilter(e.Name, filter)).ToList();
+            }
 
             long total = entries.Count;
             long counter = 0;
             long skipped = 0;
 
-            if (listing == false)
+            if (entries.Count > 0)
             {
-                Directory.CreateDirectory(outputPath);
-            }
-
-            foreach (var entry in entries)
-            {
-                counter++;
-
-                var entryName = entry.Name;
-
-                if (entryName.Contains("/") == true)
-                {
-                    entryName = entryName.Replace("/", Path.DirectorySeparatorChar.ToString());
-                }
-
-                if (entryName.Contains("..\\") == true)
-                {
-                    entryName = entryName.Replace("..\\", "__UP\\");
-                }
-
-                string entryPath = Path.Combine(outputPath, entryName);
-
-                if (overwriteFiles == false && File.Exists(entryPath) == true)
-                {
-                    Console.WriteLine("{1:D5}/{2:D5} !! {0}", entryName, counter, total);
-                    skipped++;
-                    continue;
-                }
-                else
-                {
-                    Console.WriteLine("{1:D5}/{2:D5} => {0}", entryName, counter, total);
-                }
+                Stream input = File.OpenRead(inputPath);
+                byte[] buffer = new byte[0x4000];
 
                 if (listing == false)
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(entryPath));
-                    Stream output = File.Open(entryPath, FileMode.Create, FileAccess.Write, FileShare.Read);
+                    Directory.CreateDirectory(outputPath);
+                }
 
-                    input.Seek(entry.Offset, SeekOrigin.Begin);
+                foreach (var entry in entries)
+                {
+                    counter++;
 
-                    int left = (int)entry.Size;
-                    while (left > 0)
+                    var entryName = entry.Name;
+
+                    if (entryName.Contains("/") == true)
                     {
-                        int read = input.Read(buffer, 0, Math.Min(left, buffer.Length));
-                        if (read == 0)
-                        {
-                            break;
-                        }
-                        output.Write(buffer, 0, read);
-                        left -= read;
+                        entryName = entryName.Replace("/", Path.DirectorySeparatorChar.ToString());
                     }
 
-                    output.Flush();
-                    output.Close();
-                }
-            }
+                    if (entryName.Contains("..\\") == true)
+                    {
+                        entryName = entryName.Replace("..\\", "__UP\\");
+                    }
 
-            input.Close();
+                    string entryPath = Path.Combine(outputPath, entryName);
+
+                    if (overwriteFiles == false && File.Exists(entryPath) == true)
+                    {
+                        Console.WriteLine("{1:D5}/{2:D5} !! {0}", entryName, counter, total);
+                        skipped++;
+                        continue;
+                    }
+                    else
+                    {
+                        Console.WriteLine("{1:D5}/{2:D5} => {0}", entryName, counter, total);
+                    }
+
+                    if (listing == false)
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(entryPath));
+                        Stream output = File.Open(entryPath, FileMode.Create, FileAccess.Write, FileShare.Read);
+
+                        input.Seek(entry.Offset, SeekOrigin.Begin);
+
+                        int left = (int)entry.Size;
+                        while (left > 0)
+                        {
+                            int read = input.Read(buffer, 0, Math.Min(left, buffer.Length));
+                            if (read == 0)
+                            {
+                                break;
+                            }
+                            output.Write(buffer, 0, read);
+                            left -= read;
+                        }
+
+                        output.Flush();
+                        output.Close();
+                    }
+                }
+
+                input.Close();
+            }
 
             if (skipped > 0)
             {
                 Console.WriteLine("{0} files not overwritten.", skipped);
+                
+                if (pauseOnError == true)
+                {
+                    Console.ReadKey(true);
+                }
             }
 
-            Console.ReadKey(true);
+            //Console.ReadKey(true);
+        }
+
+        private static bool MatchesFilter(string path, string filter)
+        {
+            string extension = Path.GetExtension(path);
+            if (extension == null)
+            {
+                return false;
+            }
+            return extension.ToLowerInvariant() == filter;
         }
 
         private static string GetExecutableName()
