@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Gibbed.Helpers;
 
@@ -153,7 +154,7 @@ namespace Gibbed.Atlus.FileFormats.ArchiveFormats
 
                     entries.Add(new ArchiveEntry()
                     {
-                        Name = Encoding.ASCII.GetString(buffer, 0, length),
+                        Name = GetUniqueName(Encoding.ASCII.GetString(buffer, 0, length), entries),
                         Offset = input.Position,
                         Size = size,
                     });
@@ -168,6 +169,27 @@ namespace Gibbed.Atlus.FileFormats.ArchiveFormats
 
                 return entries;
             }
+        }
+
+        private static string GetUniqueName(string name, List<ArchiveEntry> entries)
+        {
+            name = name.Replace('/', '\\');
+
+            string basePath = Path.GetDirectoryName(name);
+            string baseName = Path.GetFileNameWithoutExtension(name);
+            string extension = Path.GetExtension(name);
+            string current = name;
+            int counter = 0;
+
+            while (entries.SingleOrDefault(e => e.Name == current) != null)
+            {
+                current = Path.Combine(basePath, Path.ChangeExtension(
+                    string.Format("__DUPLICATE_{1}_{0}",
+                        baseName, counter), extension));
+                counter++;
+            }
+
+            return current;
         }
     }
 }
