@@ -5,7 +5,7 @@ using System.Linq;
 using Gibbed.Atlus.FileFormats;
 using Gibbed.Helpers;
 using NDesk.Options;
-using Instruction = Gibbed.Atlus.FileFormats.BfFile.Instruction;
+using Instruction = Gibbed.Atlus.FileFormats.BinaryScriptFile.Instruction;
 
 namespace Gibbed.Atlus.DisassembleBF
 {
@@ -31,7 +31,7 @@ namespace Gibbed.Atlus.DisassembleBF
         }
 
         private static string CommentInstruction(
-            BfFile bf, uint index, BfFile.Op opcode)
+            BinaryScriptFile bf, uint index, BinaryScriptFile.Op opcode)
         {
             switch (opcode.Instruction)
             {
@@ -48,14 +48,14 @@ namespace Gibbed.Atlus.DisassembleBF
         }
 
         private static string DisassembleInstruction(
-            BfFile bf, uint index, BfFile.Op opcode)
+            BinaryScriptFile bf, uint index, BinaryScriptFile.Op opcode)
         {
             switch (opcode.Instruction)
             {
-                case Instruction.EnterFunction:
+                case Instruction.BeginProcedure:
                 {
                     return string.Format("enter {0}",
-                        bf.Functions[opcode.Extra].Name);
+                        bf.Procedures[opcode.Extra].Name);
                 }
 
                 case Instruction.CallNative:
@@ -69,10 +69,10 @@ namespace Gibbed.Atlus.DisassembleBF
                     return "ret";
                 }
 
-                case Instruction.CallFunction:
+                case Instruction.CallProcedure:
                 {
-                    return string.Format("callf {0}",
-                        bf.Functions[opcode.Extra].Name);
+                    return string.Format("callp {0}",
+                        bf.Procedures[opcode.Extra].Name);
                 }
 
                 case Instruction.Jump:
@@ -106,10 +106,10 @@ namespace Gibbed.Atlus.DisassembleBF
         }
 
         private static void WriteInstruction(
-            TextWriter output, BfFile bf, uint index, BfFile.Op opcode)
+            TextWriter output, BinaryScriptFile bf, uint index, BinaryScriptFile.Op opcode)
         {
             var labels = bf.Labels.Where(l => l.Offset == index).ToArray();
-            var function = bf.Functions.SingleOrDefault(l => l.Offset == index);
+            var function = bf.Procedures.SingleOrDefault(l => l.Offset == index);
 
             if (function != null)
             {
@@ -118,7 +118,7 @@ namespace Gibbed.Atlus.DisassembleBF
                     output.WriteLine();
                 }
 
-                output.WriteLine("[{0}]#{1}", function.Name, bf.Functions.IndexOf(function));
+                output.WriteLine("[{0}]#{1}", function.Name, bf.Procedures.IndexOf(function));
             }
 
             if (labels.Length > 0)
@@ -141,10 +141,10 @@ namespace Gibbed.Atlus.DisassembleBF
             }
 
             output.Write(
-                String.Format("{0:D5} {1:X8} {2}:{3:X4} {4} {5}",
+                String.Format("{0:D5} {1} {2}:{3:X4} {4} {5}",
                     index,
-                    ((uint)opcode).Swap(),
-                    ((ushort)opcode).ToString().PadLeft(4),
+                    opcode.ToCode(bf.LittleEndian),
+                    ((ushort)opcode.Instruction).ToString().PadLeft(4),
                     opcode.Extra,
                     ((labels.Length > 0) ? ("@" + labels.Implode(l => l.Name, " +@")) : "").PadRight(16),
                     line));
@@ -199,7 +199,7 @@ namespace Gibbed.Atlus.DisassembleBF
 
             var input = File.OpenRead(inputPath);
 
-            var bf = new BfFile();
+            var bf = new BinaryScriptFile();
             bf.Deserialize(input);
 
             input.Close();
@@ -210,21 +210,21 @@ namespace Gibbed.Atlus.DisassembleBF
 
             int ep = (int)bf.Entrypoint;
 
-            if (ep > bf.Functions.Count)
+            if (ep > bf.Procedures.Count)
             {
                 output.WriteLine("# Entrypoint: ??? {0}", ep);
             }
-            else if (ep == bf.Functions.Count)
+            else if (ep == bf.Procedures.Count)
             {
                 output.WriteLine("# Entrypoint: <none>");
             }
             else
             {
-                output.WriteLine("# Entrypoint: {0}", bf.Functions[ep].Name);
+                output.WriteLine("# Entrypoint: {0}", bf.Procedures[ep].Name);
             }
 
             output.WriteLine("# Functions: {0}",
-                bf.Functions.Implode(f => f.Name, ", "));
+                bf.Procedures.Implode(f => f.Name, ", "));
 
             output.WriteLine();
 

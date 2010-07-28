@@ -6,7 +6,7 @@ using Gibbed.Helpers;
 
 namespace Gibbed.Atlus.FileFormats
 {
-    public class BmdFile
+    public class BinaryMessageFile
     {
         public uint Version;
         public List<Message> Messages;
