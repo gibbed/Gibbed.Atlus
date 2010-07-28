@@ -53,11 +53,13 @@
     <Compile Include="Battle\MessageTableFile.cs" />
     <Compile Include="Battle\PersonaStatistics.cs" />
     <Compile Include="Battle\PersonaTableFile.cs" />
-    <Compile Include="BfFile.cs" />
-    <Compile Include="BmdFile.cs" />
+    <Compile Include="BinaryScriptFile.cs" />
+    <Compile Include="BinaryMessageFile.cs" />
     <Compile Include="GameEncoding.cs" />
     <Compile Include="IArchiveFormat.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Script\Instruction.cs" />
+    <Compile Include="Script\Opcode.cs" />
     <Compile Include="StreamHelpers.cs" />
     <Compile Include="TxdFile.cs" />
   </ItemGroup>

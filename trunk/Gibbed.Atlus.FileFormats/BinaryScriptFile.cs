@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using Gibbed.Helpers;
+using Gibbed.Atlus.FileFormats.Script;
 
 namespace Gibbed.Atlus.FileFormats
 {
@@ -15,7 +16,7 @@ namespace Gibbed.Atlus.FileFormats
 
         public List<CodeReference> Procedures;
         public List<CodeReference> Labels;
-        public Op[] Code;
+        public Opcode[] Code;
         public BinaryMessageFile Data;
         public byte[] Junk;
 
@@ -117,16 +118,16 @@ namespace Gibbed.Atlus.FileFormats
                             throw new FormatException("code size mismatch");
                         }
 
-                        this.Code = new Op[blockInfo.ElementCount];
+                        this.Code = new Opcode[blockInfo.ElementCount];
                         for (int i = 0; i < this.Code.Length; i++)
                         {
                             ushort instruction = input.ReadValueU16(this.LittleEndian);
-                            ushort extra = input.ReadValueU16(this.LittleEndian);
+                            ushort arg = input.ReadValueU16(this.LittleEndian);
 
-                            this.Code[i] = new Op()
+                            this.Code[i] = new Opcode()
                             {
                                 Instruction = (Instruction)instruction,
-                                Extra = extra,
+                                Argument = arg,
                             };
                         }
 
@@ -213,51 +214,6 @@ namespace Gibbed.Atlus.FileFormats
             public uint ElementSize;
             public uint ElementCount;
             public uint Offset;
-        }
-
-        public class Op
-        {
-            public Instruction Instruction;
-            public ushort Extra;
-            public string ToCode(bool littleEndian)
-            {
-                if (littleEndian == true)
-                {
-                    return string.Format("{0:X4}{1:X4}",
-                        (ushort)this.Instruction,
-                        this.Extra);
-                }
-                else
-                {
-                    return string.Format("{0:X4}{1:X4}",
-                        ((ushort)this.Instruction).Swap(),
-                        this.Extra.Swap());
-                }
-            }
-
-            public override string ToString()
-            {
-                if (this.Extra == 0)
-                {
-                    return this.Instruction.ToString();
-                }
-
-                return string.Format("{0} ({1})",
-                    this.Instruction,
-                    this.Extra);
-            }
-        }
-
-        public enum Instruction : ushort
-        {
-            BeginProcedure = 7,
-            CallNative = 8,
-            Return = 9,
-            CallProcedure = 11,
-            Jump = 13,
-            Add = 14,
-            JumpZero = 28,
-            PushWord = 29,
         }
     }
 }
