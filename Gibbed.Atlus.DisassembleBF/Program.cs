@@ -5,7 +5,7 @@ using System.Linq;
 using Gibbed.Atlus.FileFormats;
 using Gibbed.Helpers;
 using NDesk.Options;
-using Instruction = Gibbed.Atlus.FileFormats.BinaryScriptFile.Instruction;
+using Gibbed.Atlus.FileFormats.Script;
 
 namespace Gibbed.Atlus.DisassembleBF
 {
@@ -31,13 +31,13 @@ namespace Gibbed.Atlus.DisassembleBF
         }
 
         private static string CommentInstruction(
-            BinaryScriptFile bf, uint index, BinaryScriptFile.Op opcode)
+            BinaryScriptFile bf, uint index, Opcode opcode)
         {
             switch (opcode.Instruction)
             {
                 case Instruction.CallNative:
                 {
-                    return HintCall(opcode.Extra);
+                    return HintCall(opcode.Argument);
                 }
 
                 default:
@@ -48,20 +48,20 @@ namespace Gibbed.Atlus.DisassembleBF
         }
 
         private static string DisassembleInstruction(
-            BinaryScriptFile bf, uint index, BinaryScriptFile.Op opcode)
+            BinaryScriptFile bf, uint index, Opcode opcode)
         {
             switch (opcode.Instruction)
             {
                 case Instruction.BeginProcedure:
                 {
                     return string.Format("enter {0}",
-                        bf.Procedures[opcode.Extra].Name);
+                        bf.Procedures[opcode.Argument].Name);
                 }
 
                 case Instruction.CallNative:
                 {
                     return string.Format("calln {0}",
-                        opcode.Extra);
+                        opcode.Argument);
                 }
 
                 case Instruction.Return:
@@ -72,13 +72,13 @@ namespace Gibbed.Atlus.DisassembleBF
                 case Instruction.CallProcedure:
                 {
                     return string.Format("callp {0}",
-                        bf.Procedures[opcode.Extra].Name);
+                        bf.Procedures[opcode.Argument].Name);
                 }
 
                 case Instruction.Jump:
                 {
                     return String.Format("jmp @{0}",
-                        bf.Labels[opcode.Extra].Name);
+                        bf.Labels[opcode.Argument].Name);
                 }
 
                 case Instruction.Add:
@@ -89,13 +89,13 @@ namespace Gibbed.Atlus.DisassembleBF
                 case Instruction.JumpZero:
                 {
                     return String.Format("jz @{0}",
-                        bf.Labels[opcode.Extra].Name);
+                        bf.Labels[opcode.Argument].Name);
                 }
 
                 case Instruction.PushWord:
                 {
                     return string.Format("pushw {0}",
-                        (short)opcode.Extra);
+                        (short)opcode.Argument);
                 }
 
                 default:
@@ -106,7 +106,7 @@ namespace Gibbed.Atlus.DisassembleBF
         }
 
         private static void WriteInstruction(
-            TextWriter output, BinaryScriptFile bf, uint index, BinaryScriptFile.Op opcode)
+            TextWriter output, BinaryScriptFile bf, uint index, Opcode opcode)
         {
             var labels = bf.Labels.Where(l => l.Offset == index).ToArray();
             var function = bf.Procedures.SingleOrDefault(l => l.Offset == index);
@@ -127,7 +127,7 @@ namespace Gibbed.Atlus.DisassembleBF
             }
 
             if ((ushort)opcode.Instruction == 4 &&
-                opcode.Extra != 0)
+                opcode.Argument != 0)
             {
                 throw new Exception();
             }
@@ -145,7 +145,7 @@ namespace Gibbed.Atlus.DisassembleBF
                     index,
                     opcode.ToCode(bf.LittleEndian),
                     ((ushort)opcode.Instruction).ToString().PadLeft(4),
-                    opcode.Extra,
+                    opcode.Argument,
                     ((labels.Length > 0) ? ("@" + labels.Implode(l => l.Name, " +@")) : "").PadRight(16),
                     line));
 
