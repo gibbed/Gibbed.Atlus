@@ -7,6 +7,20 @@ using Gibbed.Atlus.FileFormats.Script;
 
 namespace Gibbed.Atlus.FileFormats
 {
+    /* Binary Script File
+     * 
+     * Formats
+     *   source: *.scr, *.h (compiled to binary form with 'scr2bin')
+     *   ver0:   *.bf
+     * 
+     * Games
+     *   Persona 3 FES (ver0)
+     *   Persona 4 (ver0)
+     *   Persona 3 Portable (ver0)
+     *   Trauma Center (ver0)
+     *   Trauma Team (ver0)
+     *   Strange Journey (ver0)
+     */
     public class BinaryScriptFile
     {
         public bool LittleEndian;

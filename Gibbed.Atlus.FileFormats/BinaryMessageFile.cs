@@ -6,6 +6,20 @@ using Gibbed.Helpers;
 
 namespace Gibbed.Atlus.FileFormats
 {
+    /* Binary Messages (Database?)
+     * 
+     * Formats
+     *   source: *.msg (converted to binary form with 'msgconv')
+     *   ver1:   *.bmd
+     *   ver2:   *.bm2
+     * 
+     * Games
+     *   Persona 3 FES (ver1)
+     *   Persona 4 (ver1)
+     *   Persona 3 Portable (ver1)
+     *   Trauma Center (ver2)
+     *   Trauma Team (ver2)
+     */
     public class BinaryMessageFile
     {
         public uint Version;
