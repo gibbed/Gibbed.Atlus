@@ -6,20 +6,38 @@ using Gibbed.Helpers;
 
 namespace Gibbed.Atlus.FileFormats
 {
-    public class BfFile
+    public class BinaryScriptFile
     {
+        public bool LittleEndian;
+
         public uint Unknown04;
         public uint Entrypoint;
 
-        public List<CodeReference> Functions;
+        public List<CodeReference> Procedures;
         public List<CodeReference> Labels;
         public Op[] Code;
-        public BmdFile Data;
+        public BinaryMessageFile Data;
         public byte[] Junk;
 
         public void Deserialize(Stream input)
         {
+            this.LittleEndian = true;
+
             var header = input.ReadStructure<FileHeader>();
+
+            // guess...
+            if (header.BlockCount > 255)
+            {
+                this.LittleEndian = false;
+
+                header.Unknown00 = header.Unknown00.Swap();
+                header.Unknown04 = header.Unknown04.Swap();
+                header.Unknown0C = header.Unknown0C.Swap();
+                header.BlockCount = header.BlockCount.Swap();
+                header.Entrypoint = header.Entrypoint.Swap();
+                header.Unknown18 = header.Unknown18.Swap();
+                header.Unknown1C = header.Unknown1C.Swap();
+            }
 
             if (header.Unknown00 != 0 ||
                 header.Magic != 0x30574C46 || // FLW0
@@ -37,6 +55,14 @@ namespace Gibbed.Atlus.FileFormats
             for (int i = 0; i < blockInfos.Length; i++)
             {
                 blockInfos[i] = input.ReadStructure<FileBlockInfo>();
+
+                if (this.LittleEndian == false)
+                {
+                    blockInfos[i].Type = blockInfos[i].Type.Swap();
+                    blockInfos[i].ElementSize = blockInfos[i].ElementSize.Swap();
+                    blockInfos[i].ElementCount = blockInfos[i].ElementCount.Swap();
+                    blockInfos[i].Offset = blockInfos[i].Offset.Swap();
+                }
             }
 
             foreach (var blockInfo in blockInfos)
@@ -45,20 +71,20 @@ namespace Gibbed.Atlus.FileFormats
 
                 switch (blockInfo.Type)
                 {
-                    // Functions
+                    // Procedures
                     case 0:
                     {
                         if (blockInfo.ElementSize != 32)
                         {
-                            throw new FormatException("function info size mismatch");
+                            throw new FormatException("procedure info size mismatch");
                         }
 
-                        this.Functions = new List<CodeReference>();
+                        this.Procedures = new List<CodeReference>();
                         for (uint i = 0; i < blockInfo.ElementCount; i++)
                         {
-                            var func = new CodeReference();
-                            func.Deserialize(input);
-                            this.Functions.Add(func);
+                            var procedure = new CodeReference();
+                            procedure.Deserialize(input, this.LittleEndian);
+                            this.Procedures.Add(procedure);
                         }
 
                         break;
@@ -76,7 +102,7 @@ namespace Gibbed.Atlus.FileFormats
                         for (uint i = 0; i < blockInfo.ElementCount; i++)
                         {
                             var label = new CodeReference();
-                            label.Deserialize(input);
+                            label.Deserialize(input, this.LittleEndian);
                             this.Labels.Add(label);
                         }
 
@@ -94,7 +120,14 @@ namespace Gibbed.Atlus.FileFormats
                         this.Code = new Op[blockInfo.ElementCount];
                         for (int i = 0; i < this.Code.Length; i++)
                         {
-                            this.Code[i] = (Op)input.ReadValueU32();
+                            ushort instruction = input.ReadValueU16(this.LittleEndian);
+                            ushort extra = input.ReadValueU16(this.LittleEndian);
+
+                            this.Code[i] = new Op()
+                            {
+                                Instruction = (Instruction)instruction,
+                                Extra = extra,
+                            };
                         }
 
                         break;
@@ -112,8 +145,8 @@ namespace Gibbed.Atlus.FileFormats
                         {
                             var memory = input.ReadToMemoryStream(blockInfo.ElementCount);
 
-                            this.Data = new BmdFile();
-                            this.Data.Deserialize(memory);
+                            //this.Data = new BmdFile();
+                            //this.Data.Deserialize(memory);
                         }
 
                         break;
@@ -147,11 +180,11 @@ namespace Gibbed.Atlus.FileFormats
             public uint Offset;
             public uint Unknown1C;
 
-            public void Deserialize(Stream input)
+            public void Deserialize(Stream input, bool littleEndian)
             {
                 this.Name = input.ReadStringASCII(24, true);
-                this.Offset = input.ReadValueU32();
-                this.Unknown1C = input.ReadValueU32();
+                this.Offset = input.ReadValueU32(littleEndian);
+                this.Unknown1C = input.ReadValueU32(littleEndian);
 
                 if (this.Unknown1C != 0)
                 {
@@ -186,19 +219,20 @@ namespace Gibbed.Atlus.FileFormats
         {
             public Instruction Instruction;
             public ushort Extra;
-
-            public static implicit operator uint(Op op)
+            public string ToCode(bool littleEndian)
             {
-                return (uint)(op.Extra << 16) | (ushort)op.Instruction;
-            }
-
-            public static implicit operator Op(uint value)
-            {
-                return new Op()
+                if (littleEndian == true)
                 {
-                    Instruction = (Instruction)(value & 0xFFFF),
-                    Extra = (ushort)((value & 0xFFFF0000) >> 16),
-                };
+                    return string.Format("{0:X4}{1:X4}",
+                        (ushort)this.Instruction,
+                        this.Extra);
+                }
+                else
+                {
+                    return string.Format("{0:X4}{1:X4}",
+                        ((ushort)this.Instruction).Swap(),
+                        this.Extra.Swap());
+                }
             }
 
             public override string ToString()
@@ -216,10 +250,10 @@ namespace Gibbed.Atlus.FileFormats
 
         public enum Instruction : ushort
         {
-            EnterFunction = 7,
+            BeginProcedure = 7,
             CallNative = 8,
             Return = 9,
-            CallFunction = 11,
+            CallProcedure = 11,
             Jump = 13,
             Add = 14,
             JumpZero = 28,
