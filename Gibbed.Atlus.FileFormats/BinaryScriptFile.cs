@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
-using Gibbed.Helpers;
 using Gibbed.Atlus.FileFormats.Script;
+using Gibbed.Helpers;
 
 namespace Gibbed.Atlus.FileFormats
 {
@@ -160,8 +160,8 @@ namespace Gibbed.Atlus.FileFormats
                         {
                             var memory = input.ReadToMemoryStream(blockInfo.ElementCount);
 
-                            //this.Data = new BmdFile();
-                            //this.Data.Deserialize(memory);
+                            this.Data = new BinaryMessageFile();
+                            this.Data.Deserialize(memory);
                         }
 
                         break;
