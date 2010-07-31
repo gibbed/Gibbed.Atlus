@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Gibbed.Atlus.FileFormats;
+using Gibbed.Atlus.FileFormats.Script;
 using Gibbed.Helpers;
 using NDesk.Options;
-using Gibbed.Atlus.FileFormats.Script;
 
 namespace Gibbed.Atlus.DisassembleBF
 {
-    internal class Program
+    public class Program
     {
         private static string GetExecutableName()
         {
@@ -25,6 +25,7 @@ namespace Gibbed.Atlus.DisassembleBF
                 case 7: return "get flag";
                 case 8: return "set flag";
                 case 9: return "clear flag";
+                case 20499: return "is persona equipped";
             }
 
             return null;
@@ -35,6 +36,18 @@ namespace Gibbed.Atlus.DisassembleBF
         {
             switch (opcode.Instruction)
             {
+                case Instruction.PushFloat:
+                {
+                    return "float";
+                }
+
+                /*
+                case Instruction.PushWord:
+                {
+                    return "word";
+                }
+                */
+
                 case Instruction.CallNative:
                 {
                     return HintCall(opcode.Argument);
@@ -52,6 +65,44 @@ namespace Gibbed.Atlus.DisassembleBF
         {
             switch (opcode.Instruction)
             {
+                case Instruction.PushInt:
+                {
+                    uint dummy =
+                        ((uint)bf.Code[index + 1].Instruction) |
+                        ((uint)bf.Code[index + 1].Argument) << 16;
+                    return string.Format("push {0}",
+                        (int)dummy);
+                }
+
+                case Instruction.PushFloat:
+                {
+                    // this is some retarded way to do this
+                    uint dummy =
+                        ((uint)bf.Code[index + 1].Instruction) |
+                        ((uint)bf.Code[index + 1].Argument) << 16;
+                    byte[] data = BitConverter.GetBytes(dummy);
+                    float value = BitConverter.ToSingle(data, 0);
+                    return string.Format("push {0}",
+                        value);
+                }
+
+                case Instruction.PushVariable:
+                {
+                    return string.Format("push var{0}",
+                        opcode.Argument);
+                }
+
+                case Instruction.PushResult:
+                {
+                    return "push result";
+                }
+
+                case Instruction.PopVariable:
+                {
+                    return string.Format("pop var{0}",
+                        opcode.Argument);
+                }
+
                 case Instruction.BeginProcedure:
                 {
                     return string.Format("enter {0}",
@@ -86,17 +137,35 @@ namespace Gibbed.Atlus.DisassembleBF
                     return "add";
                 }
 
-                case Instruction.JumpZero:
+                case Instruction.Subtract:
                 {
-                    return String.Format("jz @{0}",
+                    return "sub";
+                }
+
+                case Instruction.Not:
+                {
+                    return "not";
+                }
+
+                case Instruction.JumpFalse:
+                {
+                    return String.Format("jf @{0}",
                         bf.Labels[opcode.Argument].Name);
                 }
 
-                case Instruction.PushWord:
+                case Instruction.PushShort:
                 {
-                    return string.Format("pushw {0}",
+                    return string.Format("push {0}",
                         (short)opcode.Argument);
                 }
+
+                /*
+                case Instruction.SetVariable:
+                {
+                    return string.Format("set var{0}",
+                        opcode.Argument);
+                }
+                */
 
                 default:
                 {
@@ -106,7 +175,11 @@ namespace Gibbed.Atlus.DisassembleBF
         }
 
         private static void WriteInstruction(
-            TextWriter output, BinaryScriptFile bf, uint index, Opcode opcode)
+            TextWriter output,
+            BinaryScriptFile bf,
+            uint index,
+            Opcode opcode,
+            bool isData)
         {
             var labels = bf.Labels.Where(l => l.Offset == index).ToArray();
             var function = bf.Procedures.SingleOrDefault(l => l.Offset == index);
@@ -132,8 +205,22 @@ namespace Gibbed.Atlus.DisassembleBF
                 throw new Exception();
             }
 
-            var line = DisassembleInstruction(bf, index, opcode);
-            var comment = CommentInstruction(bf, index, opcode);
+            string line = "";
+            string raw = "";
+            string comment = null;
+
+            if (isData == false)
+            {
+                line = DisassembleInstruction(bf, index, opcode);
+                raw = string.Format("{0}:{1:X4}",
+                    (ushort)opcode.Instruction,
+                    opcode.Argument);
+                comment = CommentInstruction(bf, index, opcode);
+            }
+            else
+            {
+                raw = "(data)";
+            }
 
             if (comment != null)
             {
@@ -141,11 +228,10 @@ namespace Gibbed.Atlus.DisassembleBF
             }
 
             output.Write(
-                String.Format("{0:D5} {1} {2}:{3:X4} {4} {5}",
+                String.Format("{0:D5} {1} {2} {3} {4}",
                     index,
-                    opcode.ToCode(bf.LittleEndian),
-                    ((ushort)opcode.Instruction).ToString().PadLeft(4),
-                    opcode.Argument,
+                    GetOpcodeBytes(opcode, bf.LittleEndian),
+                    (raw != null ? raw : "").PadLeft(11),
                     ((labels.Length > 0) ? ("@" + labels.Implode(l => l.Name, " +@")) : "").PadRight(16),
                     line));
 
@@ -155,6 +241,22 @@ namespace Gibbed.Atlus.DisassembleBF
             }
 
             output.WriteLine();
+        }
+
+        private static string GetOpcodeBytes(Opcode opcode, bool littleEndian)
+        {
+            if (littleEndian == true)
+            {
+                return string.Format("{0:X4}{1:X4}",
+                    ((ushort)opcode.Instruction).Swap(),
+                    opcode.Argument.Swap());
+            }
+            else
+            {
+                return string.Format("{0:X4}{1:X4}",
+                    ((ushort)opcode.Instruction),
+                    opcode.Argument);
+            }
         }
 
         public static void Main(string[] args)
@@ -220,17 +322,31 @@ namespace Gibbed.Atlus.DisassembleBF
             }
             else
             {
-                output.WriteLine("# Entrypoint: {0}", bf.Procedures[ep].Name);
+                output.WriteLine("# Entrypoint: {0} ; most likely wrong", bf.Procedures[ep].Name);
             }
 
-            output.WriteLine("# Functions: {0}",
+            output.WriteLine("# Procedures: {0}",
                 bf.Procedures.Implode(f => f.Name, ", "));
 
             output.WriteLine();
 
+            int dataOps = 0;
             for (uint i = 0; i < bf.Code.Length; i++)
             {
-                WriteInstruction(output, bf, i, bf.Code[i]);
+                WriteInstruction(output, bf, i, bf.Code[i], dataOps > 0);
+
+                if (dataOps > 0)
+                {
+                    dataOps--;
+                }
+                else
+                {
+                    if (bf.Code[i].Instruction == Instruction.PushInt ||
+                        bf.Code[i].Instruction == Instruction.PushFloat)
+                    {
+                        dataOps++;
+                    }
+                }
             }
 
             output.WriteLine();

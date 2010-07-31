@@ -41,7 +41,7 @@ namespace Gibbed.Atlus.FileFormats
                 throw new FormatException();
             }
 
-            if (header.Magic != 0x3147534d)
+            if (header.Magic != 0x3147534D)
             {
                 throw new FormatException();
             }
@@ -115,11 +115,7 @@ namespace Gibbed.Atlus.FileFormats
                         string name = input.ReadStringASCII(24, true);
                         short unknown = input.ReadValueS16();
                         short choiceCount = input.ReadValueS16();
-
-                        if (input.ReadValueU32() != 0)
-                        {
-                            throw new FormatException();
-                        }
+                        uint unknown2 = input.ReadValueU32();
 
                         if (unknown != 0)
                         {
