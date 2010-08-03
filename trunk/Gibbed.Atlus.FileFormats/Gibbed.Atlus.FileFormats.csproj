@@ -55,11 +55,15 @@
     <Compile Include="Battle\PersonaTableFile.cs" />
     <Compile Include="BinaryScriptFile.cs" />
     <Compile Include="BinaryMessageFile.cs" />
+    <Compile Include="Field2d\DatFile.cs" />
+    <Compile Include="Field2d\NameFile.cs" />
+    <Compile Include="Field2d\PckFile.cs" />
     <Compile Include="GameEncoding.cs" />
     <Compile Include="IArchiveFormat.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Script\Instruction.cs" />
     <Compile Include="Script\Opcode.cs" />
+    <Compile Include="SprFile.cs" />
     <Compile Include="StreamHelpers.cs" />
     <Compile Include="TxdFile.cs" />
   </ItemGroup>
