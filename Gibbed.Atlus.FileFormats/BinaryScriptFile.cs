@@ -25,11 +25,11 @@ namespace Gibbed.Atlus.FileFormats
     {
         public bool LittleEndian;
 
-        public uint Unknown04;
+        public uint Unknown04Offset;
         public uint Entrypoint;
 
-        public List<CodeReference> Procedures;
-        public List<CodeReference> Labels;
+        public List<BinaryScript.CodeReference> Procedures;
+        public List<BinaryScript.CodeReference> Labels;
         public Opcode[] Code;
         public BinaryMessageFile Data;
         public byte[] Junk;
@@ -38,20 +38,13 @@ namespace Gibbed.Atlus.FileFormats
         {
             this.LittleEndian = true;
 
-            var header = input.ReadStructure<FileHeader>();
+            var header = input.ReadStructure<BinaryScript.FileHeader>();
 
             // guess...
             if (header.BlockCount > 255)
             {
                 this.LittleEndian = false;
-
-                header.Unknown00 = header.Unknown00.Swap();
-                header.Unknown04 = header.Unknown04.Swap();
-                header.Unknown0C = header.Unknown0C.Swap();
-                header.BlockCount = header.BlockCount.Swap();
-                header.Entrypoint = header.Entrypoint.Swap();
-                header.Unknown18 = header.Unknown18.Swap();
-                header.Unknown1C = header.Unknown1C.Swap();
+                header.Swap();
             }
 
             if (header.Unknown00 != 0 ||
@@ -63,20 +56,17 @@ namespace Gibbed.Atlus.FileFormats
                 throw new FormatException();
             }
 
-            this.Unknown04 = header.Unknown04;
+            this.Unknown04Offset = header.Unknown04Offset;
             this.Entrypoint = header.Entrypoint;
 
-            var blockInfos = new FileBlockInfo[header.BlockCount];
+            var blockInfos = new BinaryScript.FileBlockInfo[header.BlockCount];
             for (int i = 0; i < blockInfos.Length; i++)
             {
-                blockInfos[i] = input.ReadStructure<FileBlockInfo>();
+                blockInfos[i] = input.ReadStructure<BinaryScript.FileBlockInfo>();
 
                 if (this.LittleEndian == false)
                 {
-                    blockInfos[i].Type = blockInfos[i].Type.Swap();
-                    blockInfos[i].ElementSize = blockInfos[i].ElementSize.Swap();
-                    blockInfos[i].ElementCount = blockInfos[i].ElementCount.Swap();
-                    blockInfos[i].Offset = blockInfos[i].Offset.Swap();
+                    blockInfos[i].Swap();
                 }
             }
 
@@ -86,18 +76,17 @@ namespace Gibbed.Atlus.FileFormats
 
                 switch (blockInfo.Type)
                 {
-                    // Procedures
-                    case 0:
+                    case BinaryScript.FileBlockType.Procedures:
                     {
                         if (blockInfo.ElementSize != 32)
                         {
                             throw new FormatException("procedure info size mismatch");
                         }
 
-                        this.Procedures = new List<CodeReference>();
+                        this.Procedures = new List<BinaryScript.CodeReference>();
                         for (uint i = 0; i < blockInfo.ElementCount; i++)
                         {
-                            var procedure = new CodeReference();
+                            var procedure = new BinaryScript.CodeReference();
                             procedure.Deserialize(input, this.LittleEndian);
                             this.Procedures.Add(procedure);
                         }
@@ -105,18 +94,17 @@ namespace Gibbed.Atlus.FileFormats
                         break;
                     }
 
-                    // Labels
-                    case 1:
+                    case BinaryScript.FileBlockType.Labels:
                     {
                         if (blockInfo.ElementSize != 32)
                         {
                             throw new FormatException("sub info size mismatch");
                         }
 
-                        this.Labels = new List<CodeReference>();
+                        this.Labels = new List<BinaryScript.CodeReference>();
                         for (uint i = 0; i < blockInfo.ElementCount; i++)
                         {
-                            var label = new CodeReference();
+                            var label = new BinaryScript.CodeReference();
                             label.Deserialize(input, this.LittleEndian);
                             this.Labels.Add(label);
                         }
@@ -124,8 +112,7 @@ namespace Gibbed.Atlus.FileFormats
                         break;
                     }
 
-                    // Opcodes
-                    case 2:
+                    case BinaryScript.FileBlockType.Opcodes:
                     {
                         if (blockInfo.ElementSize != 4)
                         {
@@ -148,8 +135,7 @@ namespace Gibbed.Atlus.FileFormats
                         break;
                     }
 
-                    // Message Data
-                    case 3:
+                    case BinaryScript.FileBlockType.Messages:
                     {
                         if (blockInfo.ElementSize != 1)
                         {
@@ -167,8 +153,7 @@ namespace Gibbed.Atlus.FileFormats
                         break;
                     }
 
-                    // ???
-                    case 4:
+                    case BinaryScript.FileBlockType.Unknown4:
                     {
                         if (blockInfo.ElementSize != 1)
                         {
@@ -183,51 +168,10 @@ namespace Gibbed.Atlus.FileFormats
 
                     default:
                     {
-                        throw new FormatException();
+                        throw new FormatException("unknown block type");
                     }
                 }
             }
-        }
-
-        public class CodeReference
-        {
-            public string Name;
-            public uint Offset;
-            public uint Unknown1C;
-
-            public void Deserialize(Stream input, bool littleEndian)
-            {
-                this.Name = input.ReadStringASCII(24, true);
-                this.Offset = input.ReadValueU32(littleEndian);
-                this.Unknown1C = input.ReadValueU32(littleEndian);
-
-                if (this.Unknown1C != 0)
-                {
-                    throw new FormatException();
-                }
-            }
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct FileHeader
-        {
-            public uint Unknown00;
-            public uint Unknown04;
-            public uint Magic;
-            public uint Unknown0C;
-            public uint BlockCount;
-            public uint Entrypoint;
-            public uint Unknown18;
-            public uint Unknown1C;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct FileBlockInfo
-        {
-            public uint Type;
-            public uint ElementSize;
-            public uint ElementCount;
-            public uint Offset;
         }
     }
 }

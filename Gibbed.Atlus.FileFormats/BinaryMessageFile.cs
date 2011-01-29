@@ -10,15 +10,21 @@ namespace Gibbed.Atlus.FileFormats
      * 
      * Formats
      *   source: *.msg (converted to binary form with 'msgconv')
-     *   ver1:   *.bmd
-     *   ver2:   *.bm2
+     *   variant 1:   *.bmd
+     *   variant 2:   *.bm2
+     *   variant 3:   *.bmd
      * 
-     * Games
-     *   Persona 3 FES (ver1)
-     *   Persona 4 (ver1)
-     *   Persona 3 Portable (ver1)
-     *   Trauma Center (ver2)
-     *   Trauma Team (ver2)
+     * Games (variant 1)
+     *   Persona 3 FES
+     *   Persona 4
+     *   Persona 3 Portable
+     *   
+     * Games (variant 2)
+     *   Trauma Center
+     *   Trauma Team
+     * 
+     * Games (variant 3)
+     *   Catherine
      */
     public class BinaryMessageFile
     {
