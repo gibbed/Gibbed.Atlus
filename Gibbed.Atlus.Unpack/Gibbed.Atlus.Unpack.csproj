@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Gibbed.Atlus.Unpack</RootNamespace>
     <AssemblyName>Gibbed.Atlus.Unpack</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
@@ -31,6 +31,7 @@
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -73,10 +74,6 @@
     <ProjectReference Include="..\Gibbed.Atlus.FileFormats\Gibbed.Atlus.FileFormats.csproj">
       <Project>{28C55649-51A5-49F3-8444-E97C94B352E2}</Project>
       <Name>Gibbed.Atlus.FileFormats</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Gibbed.Helpers\Gibbed.Helpers.csproj">
-      <Project>{5162A9FB-4DE1-4BBF-B7A2-5E8116AB0D26}</Project>
-      <Name>Gibbed.Helpers</Name>
     </ProjectReference>
     <ProjectReference Include="..\NDesk.Options\NDesk.Options.csproj">
       <Project>{C98A6CD6-9422-4B35-8B7A-F520D75534D1}</Project>
